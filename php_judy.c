@@ -514,6 +514,42 @@ static void judy_object_unset_dimension(zval *object, zval *offset TSRMLS_DC) /*
 }
 /* }}} */
 
+static inline long hex2long(char *s, long *j, long l) /* {{{ */
+{
+	long v = 0;
+	char sym;
+	if (s[*j] == '+') {
+		(*j)++;
+		sym = s[*j];
+		while (sym != '+' && sym != '-' && *j < l) {
+			v <<= 4;
+			if (sym >= '0' && sym <= '9') {
+				v += sym - '0';
+			} else {
+				v += sym - 'a' + 10;
+			}
+			(*j)++;
+			sym = s[*j];
+		}
+	} else {
+		(*j)++;
+		sym = s[*j];
+		while (sym != '+' && sym != '-' && *j < l) {
+			v <<= 4;
+			if (sym >= '0' && sym <= '9') {
+				v -= sym - '0';
+			} else {
+				v -= sym - 'a' + 10;
+			}
+			(*j)++;
+			sym = s[*j];
+		}
+	}
+	return v;
+}
+/* }}} */
+
+
 /* {{{ PHP_MINIT_FUNCTION
 */
 PHP_MINIT_FUNCTION(judy)
@@ -543,7 +579,7 @@ PHP_MINIT_FUNCTION(judy)
 	judy_handlers.has_dimension = judy_object_has_dimension;
 
 	/* implements some interface to provide access to judy object as an array */
-	zend_class_implements(judy_ce TSRMLS_CC, 2, zend_ce_arrayaccess, spl_ce_Countable);
+	zend_class_implements(judy_ce TSRMLS_CC, 3, zend_ce_arrayaccess, spl_ce_Countable, zend_ce_serializable);
 
 	judy_ce->get_iterator = judy_get_iterator;
 
@@ -1151,6 +1187,83 @@ PHP_METHOD(judy, getType)
 }
 /* }}} */
 
+/* {{{ proto string Judy::serialize()
+   Returns serialized data */
+PHP_METHOD(judy, serialize)
+{
+	JUDY_METHOD_GET_OBJECT
+
+	if (intern->type == TYPE_INT_TO_INT) {
+		long i = 0, l;
+		long *PValue;
+		char *s;
+		Word_t index = 0, idx1 = 0, idx2 = -1, Rc_word;
+
+		JLC(Rc_word, intern->array, idx1, idx2);
+
+		l = 64 + (Rc_word << 3);
+		s = emalloc(l);
+
+		JLF(PValue, intern->array, index);
+		while (PValue != NULL && PValue != PJERR) {
+			JLG(PValue, intern->array, index);
+			if (*PValue < 0) { 
+				sprintf( s+i, "+%lx-%lx", index, -*PValue);
+			} else {
+				sprintf( s+i, "+%lx+%lx", index, *PValue);
+			}
+
+			i += strlen(s+i);
+			if (i > l - 50) {
+				l <<= 1;
+				s = erealloc (s, l);
+			}
+			JLN(PValue, intern->array, index);
+		}
+		*(s+i) = 0;
+		RETURN_STRING(s, 0);
+	}
+	RETURN_NULL();
+}
+/* }}} */
+
+/* {{{ proto void Judy::unserialize(str)
+   Returns serialized data */
+PHP_METHOD(judy, unserialize)
+{
+	char *s;
+	long j = 0;
+	int l;
+	Word_t *PValue, index, value;
+
+	JUDY_METHOD_GET_OBJECT
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &s, &l) == FAILURE) {
+		return;
+	}
+
+	if (l < 4) { 
+		return;
+	}
+
+	zend_call_method_with_0_params(&object, NULL, NULL, "free", NULL);
+
+	intern->counter = 0;
+	intern->type = TYPE_INT_TO_INT;
+	intern->array = (Pvoid_t) NULL;
+
+	while (j < l) {
+		index = hex2long(s, &j, l);
+		value = hex2long(s, &j, l);
+		JLI(PValue, intern->array, index);
+		if (PValue == NULL || PValue == PJERR) {
+			return;
+		}
+		*PValue = value;
+	}
+}
+/* }}} */
+
 /* {{{ proto string judy_version()
    Return the php judy version */
 PHP_FUNCTION(judy_version)
@@ -1195,6 +1308,8 @@ PHP_METHOD(judy, __destruct);
 PHP_METHOD(judy, getType);
 PHP_METHOD(judy, free);
 PHP_METHOD(judy, memoryUsage);
+PHP_METHOD(judy, serialize);
+PHP_METHOD(judy, unserialize);
 PHP_METHOD(judy, count);
 PHP_METHOD(judy, byCount);
 PHP_METHOD(judy, first);
@@ -1264,6 +1379,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_judy_prevEmpty, 0, 0, 1)
 	ZEND_ARG_INFO(0, index)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_judy_unserialize, 0, 0, 1)
+	ZEND_ARG_INFO(0,str)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ Judy class methods parameters the Array Access Interface
@@ -1309,6 +1428,8 @@ const zend_function_entry judy_class_methods[] = {
 	PHP_ME(judy, getType, 			NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(judy, free, 				NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(judy, memoryUsage, 		NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(judy, serialize, 		NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(judy, unserialize, 		arginfo_judy_unserialize, ZEND_ACC_PUBLIC)
 	PHP_ME(judy, count, 			arginfo_judy_count, ZEND_ACC_PUBLIC)
 	PHP_ME(judy, byCount, 			arginfo_judy_byCount, ZEND_ACC_PUBLIC)
 	PHP_ME(judy, first, 			arginfo_judy_first, ZEND_ACC_PUBLIC)
