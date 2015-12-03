@@ -55,8 +55,7 @@ zend_object *judy_object_new_ex(zend_class_entry *ce, judy_object **ptr)
 {
 	judy_object *intern;
 
-	intern = ecalloc(1, sizeof(judy_object));
-	memset(intern, 0, sizeof(judy_object));
+	intern = ecalloc(1, sizeof(judy_object) + zend_object_properties_size(ce));
 	if (ptr) {
 		*ptr = intern;
 	}
