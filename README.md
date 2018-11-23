@@ -53,26 +53,30 @@ tests/       Unit tests.
 3. HOW TO INSTALL
 ------------------
 
- A. Linux
+## A. Linux
 
    From the PHP Judy sources :
 
+   ```sh
      phpize
      ./configure --with-judy[=DIR]
      make
      make test
      make install
+   ```
 
    If you are using Ubuntu or Debian, you can install libJudy with apt :
 
+   ```sh
      apt-get install libjudydebian1 libjudy-dev
      phpize
      ./configure --with-judy=/usr
      make
      make test
      make install
-  
- B. Windows
+   ```
+
+## B. Windows
 
    On Windows, you will need to build LibJudy yourself.
 
@@ -86,7 +90,7 @@ tests/       Unit tests.
      build
 	  
    This creates "Judy.lib", copy this into the php-sdk library folder and name it 
- 
+
      libJudy.lib
 	 
    Then copy the include file "judy.h" into the php-sdk includes folder. Now its 
@@ -101,26 +105,52 @@ tests/       Unit tests.
 	 
    The rest of the steps is pretty straight forward, like any other external 
    extension:
-	
+   ```sh	
      buildconf
      configure --with-judy=shared
      nmake
+   ```
 
- C. Mac OS X
+## C. Mac OS X
+
+### Install with Homebrew
+
+   Install Homebrew Package Manager http://brew.sh/
+   ```sh
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+   ```
+
+   Install homebrew-php
+   ```sh
+   brew tap homebrew/dupes
+   brew tap homebrew/versions
+   brew tap homebrew/homebrew-php
+   ```
+
+   Install PHP Judy
+   ```sh
+   brew install php56-judy
+   ```
+
+### PECL Install
+
+   Use pecl to install the PHP Judy extension :
+   ```sh
+   sudo pecl -d preferred_state=beta install Judy
+   ```
+
+### Manual install
 
    You will need to install the libJudy first. Download the sources at 
 
      http://sourceforge.net/projects/judy/
 	  
    Extract the sources, then cd into the source directory and execute :
-
+   ```sh
      ./configure
      make
      make install
-
-   Use pecl to install the PHP Judy extension :
-
-     sudo pecl -d preferred_state=beta install Judy
+   ```
 
 
 4. USAGE (EXAMPLES)
@@ -144,55 +174,63 @@ You can use foreach() and the PHP array notation on all PHP Judy arrays.
   Bitset implementation is quite basic for now. It allow you to set a bunch of index
   setting the value to false will be the same than using unset().
 
+  ```php
     $bitset = new Judy(Judy::BITSET);
     $bitset[124] = true;
-    ...
  
     print $bitset[124]; // will print 1
  
     $bitset[124] = false; // is the same as unset($bitset[124])
+  ```
 
   B. INT_TO_INT
 
   This type let you create an array with key and value of integer, and integer only.
 
+  ```php
     $int2int = new Judy(Judy::INT_TO_INT);
     $int2int[125] = 17;
-    ...
 
     print $int2int[125]; // will print 17
+  ```
 
   C. INT_TO_MIXED
 
   This type let you create an array with key as integer and value of any type, including
   other judy array or any object.
 
+  ```php
     $int2mixed = new Judy(Judy::INT_TO_MIXED);
     $int2mixed[1] = "one";
     $int2mixed[2] = array('a', 'b', 'c');
     $int2mixed[3] = new Judy(Judy::BITSET);
+  ```
 
   D. STRING_TO_INT
 
   This type let you create an array with key as string (currently limited to 65536 char.)
   and an integer as the value.
 
+  ```php
     $string2int = new Judy(Judy::STRING_TO_INT);
     $string2int["one"] = 1;
     $string2int["two"] = 2;
 
     print $string2int["one"]; // will print 1
+  ```
 
   E. STRING_TO_MIXED
 
   This type let you create an array with key as string and values of any type, including
   other judy array or any objects.
 
+  ```php
     $string2mixed = new Judy(Judy::STRING_TO_MIXED);
     $string2mixed["string"] = "hello world!";
     $string2mixed["array"] = array('a', 'b', 'c');
     $string2mixed["integer"] = 632;
     $string2mixed["bitset"] = new Judy(Judy::BITSET);
+  ```
 
 
 5. REPORTING BUGS
